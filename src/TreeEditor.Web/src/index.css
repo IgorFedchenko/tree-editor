@@ -1,0 +1,8 @@
+.tree-row {
+  cursor: pointer;
+}
+
+.tree-toggle {
+  display: inline-block;
+  width: 2rem;
+}
