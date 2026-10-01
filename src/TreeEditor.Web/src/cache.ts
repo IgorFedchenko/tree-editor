@@ -7,6 +7,8 @@ export type CachedNode = {
   value: string;
   isDeleted: boolean;
   isChanged: boolean;
+  // the value was edited, so Apply sends it even if the node is deleted afterwards
+  isEdited: boolean;
 };
 
 export type NodeWithChildren = {
@@ -47,6 +49,7 @@ export function addLoaded(cache: CachedNode[], loaded: NodeDetails): CachedNode[
       value: loaded.value,
       isDeleted: loaded.isDeleted || ancestorIsDeleted,
       isChanged: !loaded.isDeleted && ancestorIsDeleted,
+      isEdited: false,
     },
   ];
 }
@@ -62,12 +65,15 @@ export function addChild(cache: CachedNode[], parentId: number, tempId: number):
       value: 'New node',
       isDeleted: false,
       isChanged: true,
+      isEdited: false,
     },
   ];
 }
 
 export function changeValue(cache: CachedNode[], id: number, value: string): CachedNode[] {
-  return cache.map((node) => (node.id === id && node.value !== value ? { ...node, value, isChanged: true } : node));
+  return cache.map((node) =>
+    node.id === id && node.value !== value ? { ...node, value, isChanged: true, isEdited: true } : node,
+  );
 }
 
 // new nodes are not in the database yet, so they just disappear
@@ -83,9 +89,7 @@ export function getChanges(cache: CachedNode[]): Changes {
     created: cache
       .filter((node) => node.id < 0)
       .map((node) => ({ tempId: node.id, parentId: node.parentId!, value: node.value })),
-    updated: cache
-      .filter((node) => node.id > 0 && node.isChanged && !node.isDeleted)
-      .map((node) => ({ id: node.id, value: node.value })),
+    updated: cache.filter((node) => node.id > 0 && node.isEdited).map((node) => ({ id: node.id, value: node.value })),
     deleted: cache.filter((node) => node.id > 0 && node.isChanged && node.isDeleted).map((node) => node.id),
   };
 }
@@ -98,5 +102,6 @@ export function replaceTempIds(cache: CachedNode[], newIds: NewId[]): CachedNode
     parentId: node.parentId === null ? null : realId(node.parentId),
     ancestorIds: node.ancestorIds.map(realId),
     isChanged: false,
+    isEdited: false,
   }));
 }

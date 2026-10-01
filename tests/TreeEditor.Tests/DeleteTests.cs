@@ -92,4 +92,19 @@ public class DeleteTests(ApiFixture fixture) : ApiTest(fixture)
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.True((await GetNode(18)).IsDeleted);
     }
+
+    [Fact]
+    public async Task Edit_of_a_node_deleted_in_the_same_apply_is_saved()
+    {
+        var response = await Apply(new
+        {
+            updated = new[] { new { id = 3, value = "Edited" } },
+            deleted = new[] { 2 },
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var node = await GetNode(3);
+        Assert.Equal("Edited", node.Value);
+        Assert.True(node.IsDeleted);
+    }
 }

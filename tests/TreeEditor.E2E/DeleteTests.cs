@@ -72,6 +72,31 @@ public class DeleteTests(BrowserFixture fixture)
     }
 
     [Fact]
+    public async Task Edits_are_applied_to_nodes_deleted_after_them()
+    {
+        await using var app = await TreePage.Open(fixture);
+        await app.Expand(1);
+        await app.Expand(2);
+        await app.Load(2, "Node 1.1");
+        await app.Load(3, "Node 1.1.1");
+        await app.Rename(3, "Node 1.1.1", "Edited");
+        await app.Rename(2, "Node 1.1", "Renamed");
+        await app.DeleteButton.ClickAsync();
+
+        var response = await app.ClickApply();
+        Assert.Equal(200, response.Status);
+        var expectedRequest = """
+            {"created":[],"updated":[{"id":2,"value":"Renamed"},{"id":3,"value":"Edited"}],"deleted":[2,3]}
+            """;
+        TreePage.AssertJson(expectedRequest, response.Request.PostData!);
+
+        await Expect(app.Text(app.CacheNode(2), "Renamed")).ToContainClassAsync(TreePage.StrikeClass);
+        await Expect(app.Text(app.CacheNode(3), "Edited")).ToContainClassAsync(TreePage.StrikeClass);
+        Assert.Equal("Renamed", await app.NodeValue(2));
+        Assert.Equal("Edited", await app.NodeValue(3));
+    }
+
+    [Fact]
     public async Task Deleted_node_cannot_be_edited()
     {
         await using var app = await TreePage.Open(fixture, """{"deleted":[2]}""");
