@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Text;
 using TreeEditor.Api;
 
 namespace TreeEditor.Tests;
@@ -72,11 +73,28 @@ public class ApplyTests(ApiFixture fixture) : ApiTest(fixture)
     [Fact]
     public async Task Value_longer_than_100_characters_is_a_bad_request()
     {
-        var tooLong = await Apply(new { updated = new[] { new { id = 3, value = new string('a', 101) } } });
+        var tooLongUpdate = await Apply(new { updated = new[] { new { id = 3, value = new string('a', 101) } } });
+        var tooLongCreate = await Apply(new { created = new[] { new { tempId = -1, parentId = 3, value = new string('a', 101) } } });
         var maxLength = await Apply(new { updated = new[] { new { id = 3, value = new string('a', 100) } } });
 
-        Assert.Equal(HttpStatusCode.BadRequest, tooLong.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, tooLongUpdate.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, tooLongCreate.StatusCode);
         Assert.Equal(HttpStatusCode.OK, maxLength.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("null")]
+    [InlineData("""{"created":[""")]
+    [InlineData("""{"updated":[{"id":"x","value":"a"}]}""")]
+    [InlineData("""{"created":[null]}""")]
+    [InlineData("""{"updated":[null]}""")]
+    public async Task Malformed_request_is_a_bad_request(string body)
+    {
+        var response = await Client.PostAsync("/api/apply", new StringContent(body, Encoding.UTF8, "application/json"));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
     }
 
     [Fact]
@@ -147,16 +165,11 @@ public class ApplyTests(ApiFixture fixture) : ApiTest(fixture)
     [Fact]
     public async Task Tree_can_be_very_deep()
     {
-        var chain = Enumerable.Range(1, 100)
-            .Select(i => new { tempId = -i, parentId = i == 1 ? 6 : -(i - 1), value = $"Deep {i}" })
-            .ToArray();
+        var newIds = await CreateChain(6, 100);
 
-        var response = await Apply(new { created = chain });
-
-        var result = (await response.Content.ReadFromJsonAsync<ApplyResponse>())!;
-        Assert.Equal(100, result.NewIds.Count);
-        var deepest = await GetNode(result.NewIds[^1].Id);
+        Assert.Equal(100, newIds.Count);
+        var deepest = await GetNode(newIds[^1].Id);
         Assert.Equal(105, deepest.AncestorIds.Count);
-        Assert.Equal(result.NewIds[^2].Id, deepest.ParentId);
+        Assert.Equal(newIds[^2].Id, deepest.ParentId);
     }
 }

@@ -71,6 +71,14 @@ public class ReadTests(ApiFixture fixture) : ApiTest(fixture)
     }
 
     [Fact]
+    public async Task Health_check_is_ok()
+    {
+        var response = await Client.GetAsync("/health");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Children_of_missing_node_are_not_found()
     {
         var response = await Client.GetAsync("/api/nodes/999/children");

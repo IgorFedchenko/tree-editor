@@ -24,6 +24,16 @@ public abstract class ApiTest(ApiFixture fixture) : IAsyncLifetime
 
     protected Task<HttpResponseMessage> Apply(object request) => Client.PostAsJsonAsync("/api/apply", request);
 
+    // a chain of new nodes: the first one under parentId, each next one under the previous
+    protected async Task<List<NewId>> CreateChain(int parentId, int length)
+    {
+        var chain = Enumerable.Range(1, length)
+            .Select(i => new { tempId = -i, parentId = i == 1 ? parentId : -(i - 1), value = $"Deep {i}" })
+            .ToArray();
+        var response = await Apply(new { created = chain });
+        return (await response.Content.ReadFromJsonAsync<ApplyResponse>())!.NewIds;
+    }
+
     protected async Task<T> Get<T>(string url) => (await Client.GetFromJsonAsync<T>(url))!;
 
     protected async Task<NodeDetailsDto> GetNode(int id) => await Get<NodeDetailsDto>($"/api/nodes/{id}");

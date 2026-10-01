@@ -34,12 +34,4 @@ public class ResetTests(ApiFixture fixture) : ApiTest(fixture)
 
         Assert.Equal("""{"newIds":[{"tempId":-1,"id":18}]}""", await response.Content.ReadAsStringAsync());
     }
-
-    [Fact]
-    public async Task Health_check_is_ok()
-    {
-        var response = await Client.GetAsync("/health");
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-    }
 }

@@ -1,4 +1,3 @@
-using System.Net.Http.Json;
 using TreeEditor.Api;
 
 namespace TreeEditor.Tests;
@@ -23,11 +22,7 @@ public class DeleteTests(ApiFixture fixture) : ApiTest(fixture)
     [Fact]
     public async Task Delete_reaches_nodes_that_were_never_loaded()
     {
-        var chain = Enumerable.Range(1, 100)
-            .Select(i => new { tempId = -i, parentId = i == 1 ? 6 : -(i - 1), value = $"Deep {i}" })
-            .ToArray();
-        var created = await Apply(new { created = chain });
-        var deepestId = (await created.Content.ReadFromJsonAsync<ApplyResponse>())!.NewIds[^1].Id;
+        var deepestId = (await CreateChain(6, 100))[^1].Id;
 
         await Apply(new { deleted = new[] { 2 } });
 

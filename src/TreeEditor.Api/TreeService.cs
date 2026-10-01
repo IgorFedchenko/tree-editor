@@ -15,6 +15,11 @@ public class TreeService(TreeDbContext db, ILogger<TreeService> logger)
         var newNodes = new Dictionary<int, Node>();
         foreach (var item in created)
         {
+            if (item is null)
+            {
+                throw new InvalidRequestException("created must not contain null");
+            }
+
             if (item.TempId >= 0 || newNodes.ContainsKey(item.TempId))
             {
                 throw new InvalidRequestException($"Wrong tempId {item.TempId}: it must be negative and unique");
@@ -28,6 +33,11 @@ public class TreeService(TreeDbContext db, ILogger<TreeService> logger)
 
         foreach (var item in updated)
         {
+            if (item is null)
+            {
+                throw new InvalidRequestException("updated must not contain null");
+            }
+
             var node = await db.Nodes.FindAsync(item.Id) ?? throw new NodeNotFoundException(item.Id);
             node.ChangeValue(item.Value);
         }
@@ -41,7 +51,7 @@ public class TreeService(TreeDbContext db, ILogger<TreeService> logger)
 
         await transaction.CommitAsync();
 
-        logger.LogInformation("Applied changes: {Created} created, {Updated} updated, {Deleted} deleted",
+        logger.LogInformation("Applied changes: '{Created}' created, '{Updated}' updated, '{Deleted}' deleted",
             created.Count, updated.Count, deleted.Count);
 
         return new ApplyResponse(created.Select(c => new NewId(c.TempId, newNodes[c.TempId].Id)).ToList());
