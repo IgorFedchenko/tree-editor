@@ -17,7 +17,8 @@ public class NodeTests
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
-    public void Empty_value_is_rejected(string value)
+    [InlineData("a\0b")]
+    public void Wrong_value_is_rejected(string value)
     {
         var node = Node.CreateRoot("Root");
 

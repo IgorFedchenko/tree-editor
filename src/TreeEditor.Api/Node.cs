@@ -52,6 +52,12 @@ public class Node
             throw new InvalidRequestException($"Value must be from 1 to {MaxValueLength} characters");
         }
 
+        // PostgreSQL cannot store a zero character in text
+        if (trimmed.Contains('\0'))
+        {
+            throw new InvalidRequestException("Value must not contain a zero character");
+        }
+
         return trimmed;
     }
 }
