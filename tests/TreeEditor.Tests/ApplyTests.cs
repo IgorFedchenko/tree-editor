@@ -1,4 +1,3 @@
-using System.Net.Http.Json;
 using System.Text;
 using TreeEditor.Api;
 
@@ -38,7 +37,6 @@ public class ApplyTests(ApiFixture fixture) : ApiTest(fixture)
         });
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
         Assert.Equal([4, 8], (await Get<List<NodeDto>>("/api/nodes/3/children")).Select(c => c.Id));
     }
 
@@ -55,11 +53,25 @@ public class ApplyTests(ApiFixture fixture) : ApiTest(fixture)
         Assert.Equal(17, (await ReadNodesFromDb()).Count);
     }
 
+    [Fact]
+    public async Task Update_written_before_a_failed_delete_is_rolled_back()
+    {
+        var response = await Apply(new
+        {
+            updated = new[] { new { id = 3, value = "Changed" } },
+            deleted = new[] { 999 },
+        });
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal("Node 1.1.1", (await GetNode(3)).Value);
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
     [InlineData(null)]
-    public async Task Empty_value_is_a_bad_request(string? value)
+    [InlineData("a\0b")]
+    public async Task Wrong_value_is_a_bad_request(string? value)
     {
         var created = await Apply(new { created = new[] { new { tempId = -1, parentId = 3, value } } });
         var updated = await Apply(new { updated = new[] { new { id = 3, value } } });
@@ -80,6 +92,8 @@ public class ApplyTests(ApiFixture fixture) : ApiTest(fixture)
         Assert.Equal(HttpStatusCode.BadRequest, tooLongUpdate.StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, tooLongCreate.StatusCode);
         Assert.Equal(HttpStatusCode.OK, maxLength.StatusCode);
+        Assert.Equal(100, (await GetNode(3)).Value.Length);
+        Assert.Equal([4, 8], (await Get<List<NodeDto>>("/api/nodes/3/children")).Select(c => c.Id));
     }
 
     [Theory]

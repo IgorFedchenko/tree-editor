@@ -22,6 +22,7 @@ public class ResetTests(ApiFixture fixture) : ApiTest(fixture)
         Assert.DoesNotContain(nodes, n => n.IsDeleted);
         Assert.Equal("Node 1.2", nodes.Single(n => n.Id == 10).Value);
         Assert.Equal([4, 8], (await Get<List<NodeDto>>("/api/nodes/3/children")).Select(c => c.Id));
+        await AssertSampleData();
     }
 
     [Fact]
