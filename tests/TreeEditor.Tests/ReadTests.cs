@@ -49,6 +49,15 @@ public class ReadTests(ApiFixture fixture) : ApiTest(fixture)
     }
 
     [Fact]
+    public async Task Unknown_route_is_not_found_with_problem_details()
+    {
+        var response = await Client.GetAsync("/api/nodes/abc");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+    }
+
+    [Fact]
     public async Task Children_of_missing_node_are_not_found()
     {
         var response = await Client.GetAsync("/api/nodes/999/children");
